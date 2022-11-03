@@ -1,4 +1,4 @@
-# method_func_body_extraction
+# ast_file_info_extractor
 
 This tool can be used to extract different information for a given file.
 
