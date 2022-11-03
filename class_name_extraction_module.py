@@ -26,7 +26,8 @@ class MyParsedObject:
         class_name_list = list()
         for node in ast.walk(self.tree):
             if isinstance(node, ast.ClassDef):
-                class_name_list.append(node.name)
+                start_line_number, end_line_number = node.lineno - 1, node.end_lineno - 1
+                class_name_list.append((node.name, start_line_number, end_line_number))
         return class_name_list
 
     def get_class_name_list(self):
