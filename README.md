@@ -10,3 +10,6 @@ if mode == body_extraction:
 
 if mode == class_name_extraction:
     It takes the file_dir and returns the list of all defined class names in that file, empty list otherwise.
+
+if mode == msg_variable_extraction:
+    it takes the file dir, and statement_arg_index_dir and return the list of all assert calls and its msg.
