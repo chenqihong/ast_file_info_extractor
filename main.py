@@ -12,4 +12,5 @@ elif mode == 'class_name_extraction':
     class_name_extraction(pass_file_dir)
 elif mode == "msg_variable_extraction":
     pass_file_dir = sys.argv[2]
-    msg_variable_extraction(pass_file_dir)
+    statement_arg_index_dir = sys.argv[3]
+    msg_variable_extraction(pass_file_dir, statement_arg_index_dir)

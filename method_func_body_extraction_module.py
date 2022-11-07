@@ -5,6 +5,7 @@ import ast
 import math
 import sys
 from collections import defaultdict
+from common_helper import *
 
 
 class MyParsedObject:
@@ -12,21 +13,9 @@ class MyParsedObject:
 
     def __init__(self, file_dir):
         self.file_dir = file_dir
-        self.content = self.get_content()
-        self.tree = self.parse_tree()
+        self.content = get_content(file_dir)
+        self.tree = parse_tree(self.content)
         self.func_method_body_line_num_dict = self.build_func_method_line_num_dict()
-
-    def get_content(self):
-        with open(self.file_dir, 'r') as f:
-            content = f.read()
-        return content
-
-    def parse_tree(self):
-        try:
-            return ast.parse(self.content)
-        except Exception as a:
-            print("Invalid Syntax:", a, "\nExiting...")
-            exit(0)
 
     def build_func_method_line_num_dict(self):
         """ Create a dict, key: the line number scope and value: the body content """
@@ -46,11 +35,15 @@ def choose_close_body(potential_candidates):
     """ Returns the body of method/func for nested case"""
     closest_dist = math.inf
     result_body = None
+    result_start_line_num = -1
+    result_end_line_num = -1
     for start_line_num, end_line_num, statement in potential_candidates:
         diff = end_line_num - start_line_num + 1
         if diff < closest_dist:
             result_body = statement
-    return result_body
+            result_start_line_num = start_line_num
+            result_end_line_num = end_line_num
+    return result_body, result_start_line_num, result_end_line_num
 
 
 def get_body(body_dict, line_num):
@@ -73,4 +66,7 @@ def find_body(line_num, file_dir):
 
 
 def method_func_body_extraction(pass_line_num, pass_file_dir):
-    print(find_body(line_num=int(pass_line_num), file_dir=pass_file_dir))
+    body, body_start_line_num, body_end_line_num = find_body(line_num=int(pass_line_num), file_dir=pass_file_dir)
+    # print(body, body_start_line_num, body_end_line_num)
+    # print("type = ", type(body))
+    return body, body_start_line_num, body_end_line_num

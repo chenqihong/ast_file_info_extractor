@@ -1,4 +1,5 @@
 import ast
+from common_helper import *
 
 
 class MyParsedObject:
@@ -6,21 +7,9 @@ class MyParsedObject:
 
     def __init__(self, file_dir):
         self.file_dir = file_dir
-        self.content = self.get_content()
-        self.tree = self.parse_tree()
+        self.content = get_content(file_dir)
+        self.tree = parse_tree(self.content)
         self.class_name_list = self.build_class_name_list()
-
-    def get_content(self):
-        with open(self.file_dir, 'r') as f:
-            content = f.read()
-        return content
-
-    def parse_tree(self):
-        try:
-            return ast.parse(self.content)
-        except Exception as a:
-            print("Invalid Syntax:", a, "\nExiting...")
-            exit(0)
 
     def build_class_name_list(self):
         class_name_list = list()
