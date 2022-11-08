@@ -5,6 +5,7 @@ from method_func_body_extraction_module import method_func_body_extraction
 import csv
 test_file_dir = 'e.py'
 default_run_method_term = '__init__'
+statement_arg_index_dir = 'statement_arg_index_file-Sheet1.csv'
 
 
 def load_sheet(sheet_dir):
@@ -166,25 +167,14 @@ def check_block_code_statement(my_parsed_obj, all_candidates_list):
     block_code_candidate_list = list()
     for statement, start_line_num, mode in single_statement_line_scope_dict:
         start_line_num, end_line_num = single_statement_line_scope_dict[(statement, start_line_num, mode)]
-        # print("start line num = ", start_line_num, " end line num = ", end_line_num)
         if is_include_in_candidate_list(all_candidates_list, start_line_num, end_line_num) or mode == 'others':
             continue
         full_line_original = find_full_line_original(file_content_list, start_line_num, end_line_num)
-        # print("found full line original = ", full_line_original)
         full_line_ast, start_line_num, end_line_num, mode = extract_full_statement(start_line_num, my_parsed_obj)
         if is_disqualify_line(full_line_original):
             continue
         block_code_candidate_list.append((full_line_ast, full_line_original, start_line_num, end_line_num))
     return block_code_candidate_list, my_parsed_obj
-
-
-def print_candidates(candidates_list, types='original', mode='full'):
-    print("Printing for candidates of ", types)
-    for full_line_original, start_line_num, end_line_num in candidates_list:
-        if mode == 'line_num_only':
-            print("start: ", start_line_num+1, " end: ", end_line_num+1)
-        else:
-            print(full_line_original, start_line_num, end_line_num)
 
 
 def find_all_candidates(my_parsed_obj):
@@ -201,8 +191,6 @@ def find_all_candidates(my_parsed_obj):
         all_candidates_list.append((full_line_ast, full_line_original, start_line_num, end_line_num))
     block_code_candidates_list, my_parsed_obj = check_block_code_statement(my_parsed_obj, all_candidates_list)
     block_code_candidates_list = filter_block_code_candidates_list(block_code_candidates_list)
-    # print_candidates(block_code_candidates_list, 'block_candidates', 'line_num_only')
-    # print_candidates(all_candidates_list, 'original', 'line_num_only')
     all_candidates_list = all_candidates_list + block_code_candidates_list
     all_candidates_list = list(set(all_candidates_list))
     return all_candidates_list
@@ -267,8 +255,6 @@ def build_global_statement_list(my_parsed_obj):
 
 
 def find_target_str_same_scope(body_start_line_num, target_statement_start_line_num, my_parsed_obj, target_parameter):
-    print('try to find target param = ', target_parameter)
-    print("from line: ", body_start_line_num, " to ", target_statement_start_line_num)
     target_str = None
     current_counter = body_start_line_num + 1
     file_content_list = my_parsed_obj.get_file_content('list')
@@ -279,13 +265,10 @@ def find_target_str_same_scope(body_start_line_num, target_statement_start_line_
             continue
         line_size = body_full_line_end_line_num - body_full_line_start_line_num + 1
         body_full_line_original = find_full_line_original(file_content_list, body_full_line_start_line_num, body_full_line_end_line_num)
-        print('line_size = ', line_size)
-        print('body_full_line_original = ', body_full_line_original)
         if body_full_line_ast is None:
             current_counter += line_size
             continue
         var, expr = get_left_right(body_full_line_ast)
-        print("var, expr = ", var)
         if var == target_parameter:
             if '"' in expr or "'" in expr:
                 target_str = expr
@@ -301,10 +284,8 @@ def find_backward_content_str(target_parameter, start_line_num, my_parsed_obj):
     body, body_start_line_num, body_end_line_num = method_func_body_extraction(start_line_num, file_dir)
     target_str = find_target_str_same_scope(body_start_line_num, start_line_num, my_parsed_obj, target_parameter)
     if target_str is None:
-        print("never been mentioned...check the init or setup method")
         class_name = get_current_method_class_name(body_start_line_num, my_parsed_obj)
         if class_name is not None:
-            # print("check init or setup...")
             init_setup_body_list = find_init_setup_body(class_name, my_parsed_obj)
             if init_setup_body_list is not None:
                 for body_statement in init_setup_body_list:
@@ -316,8 +297,6 @@ def find_backward_content_str(target_parameter, start_line_num, my_parsed_obj):
                             target_str = expr
                         break
         if target_str is None:
-            ''' check for global vars'''
-            print("check for global now..")
             global_statement_list = build_global_statement_list(my_parsed_obj)
             for global_statement, global_statement_line_num in global_statement_list:
                 global_ast_statement, global_statement_start_line_number, global_statement_end_line_number, mode = extract_full_statement(global_statement_line_num, my_parsed_obj)
@@ -336,15 +315,13 @@ def generate_results(all_candidate_list, my_parsed_obj, sheet_dict):
     result_list = list()
     for ast_statement, full_line_original_statement, start_line_num, end_line_num in all_candidate_list:
         parameter_dict = build_line_parameter_dict(ast_statement)
-        print("doing ast statement = ", ast_statement)
-        print("full_line_original_statement = ", full_line_original_statement)
         method_call_object_name, pure_call_name = analysis_call_statement(full_line_original_statement)
         for key_statement in dict(parameter_dict):
             parameter_list = parameter_dict[key_statement]
             is_contain_msg_indicator_result, right_content = is_contain_msg_indicator(parameter_list)
             if is_contain_msg_indicator_result:
-                print('contain msg indicator')
                 if '.format' in right_content or '.join' in right_content:
+                    result_list.append((ast_statement, start_line_num, end_line_num, None))
                     break
                 if '"' in right_content or "'" in right_content:
                     result_list.append((ast_statement, start_line_num, end_line_num, right_content))
@@ -356,16 +333,11 @@ def generate_results(all_candidate_list, my_parsed_obj, sheet_dict):
             else:
                 parameter_len = len(parameter_list)
                 desire_parameter_index = int(sheet_dict[pure_call_name])
-                print('desire_parameter_index = ', desire_parameter_index)
-                print("parameter list = ", parameter_list)
-                print("len parameter list = ", len(parameter_list))
                 if desire_parameter_index == -1 or parameter_len < desire_parameter_index:
-                    print("parameter len < desire parameter index")
                     result_list.append((ast_statement, start_line_num, end_line_num, None))
                     break
                 else:
                     target_parameter = parameter_list[desire_parameter_index-1]
-                    print("target parameter = ", target_parameter)
                     if '"' in target_parameter or "'" in target_parameter:
                         if '.format' in target_parameter or '.join' in target_parameter:
                             result_list.append((ast_statement, start_line_num, end_line_num, None))
@@ -373,7 +345,6 @@ def generate_results(all_candidate_list, my_parsed_obj, sheet_dict):
                         trace_str_result = target_parameter
                     else:
                         trace_str_result = find_backward_content_str(target_parameter, start_line_num, my_parsed_obj)
-                    print("trace str result = ", trace_str_result)
                     if '.format' in trace_str_result or '.join' in trace_str_result:
                         result_list.append((ast_statement, start_line_num, end_line_num, None))
                         break
@@ -383,16 +354,12 @@ def generate_results(all_candidate_list, my_parsed_obj, sheet_dict):
 
 
 def msg_variable_extraction(file_dir, statement_arg_index_dir):
-    file_dir = test_file_dir
-    statement_arg_index_dir = 'statement_arg_index_file - Sheet1.csv'
     my_parsed_obj = MyParsedObject(file_dir)
     sheet_dict = load_sheet(statement_arg_index_dir)
     all_candidate_list = find_all_candidates(my_parsed_obj)
-    print("all candidate list = ", all_candidate_list)
     result_list = generate_results(all_candidate_list, my_parsed_obj, sheet_dict)
-    print('all candidate list = ', all_candidate_list)
-    print("\n\n")
     for candidate in result_list:
-        print("candidate[0] = ", candidate[0])
-        print("candidate[1:] = ", candidate[1:])
+        print("Statement = ", candidate[0])
+        print("start_line_num, end_line_num, msg_value = ", candidate[1:])
         print("================================")
+    return result_list

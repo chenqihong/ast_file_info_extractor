@@ -146,3 +146,12 @@ def get_left_right(current_line):
             value = ast.get_source_segment(current_line, node.value)
             break
     return target, value
+
+
+def print_candidates(candidates_list, types='original', mode='full'):
+    print("Printing for candidates of ", types)
+    for full_line_original, start_line_num, end_line_num in candidates_list:
+        if mode == 'line_num_only':
+            print("start: ", start_line_num+1, " end: ", end_line_num+1)
+        else:
+            print(full_line_original, start_line_num, end_line_num)
